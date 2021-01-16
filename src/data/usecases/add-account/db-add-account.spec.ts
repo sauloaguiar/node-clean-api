@@ -1,14 +1,30 @@
+import { Encrypter } from '../../protocols/encrypter'
 import { DbAddAccount } from '../add-account/db-add-account'
+interface SutTypes {
+  sut: DbAddAccount
+  encrypterStub: Encrypter
+}
+
+const makeEncrypter = (): Encrypter => {
+  class EncrypterStub implements Encrypter {
+    async encrypt (value: string): Promise<string> {
+      return await new Promise(resolve => resolve('hashed_password'))
+    }
+  }
+  return new EncrypterStub()
+}
+const makeSut = (): SutTypes => {
+  const encrypterStub = makeEncrypter()
+  const sut = new DbAddAccount(encrypterStub)
+  return {
+    sut,
+    encrypterStub
+  }
+}
 
 describe('DbAddAccount UseCase', () => {
   test('Should call encrypter with correct password', async () => {
-    class EncrypterStub {
-      async encrypt (value: string): Promise<string> {
-        return await new Promise(resolve => resolve('hashed_password'))
-      }
-    }
-    const encrypterStub = new EncrypterStub()
-    const sut = new DbAddAccount(encrypterStub)
+    const { sut, encrypterStub } = makeSut()
     const encryptSpy = jest.spyOn(encrypterStub, 'encrypt')
     const accountData = {
       name: 'valid_name',
@@ -18,5 +34,22 @@ describe('DbAddAccount UseCase', () => {
     await sut.add(accountData)
 
     expect(encryptSpy).toHaveBeenCalledWith(accountData.password)
+  })
+
+  // checks that there's no try/catch block within the db-add-account implementation
+  test('Should throw if encrypter throws', async () => {
+    const { sut, encrypterStub } = makeSut()
+
+    // we're forcing our dependency to return an exception
+    jest.spyOn(encrypterStub, 'encrypt').mockReturnValueOnce(new Promise((resolve, reject) => reject(new Error())))
+    const accountData = {
+      name: 'valid_name',
+      email: 'valid_email',
+      password: 'valid_password'
+    }
+    const promise = sut.add(accountData)
+
+    // we expect the exception to be thrown as a rejection call within the promise
+    await expect(promise).rejects.toThrow()
   })
 })
