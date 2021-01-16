@@ -106,4 +106,22 @@ describe('DbAddAccount UseCase', () => {
     // we expect the exception to be thrown as a rejection call within the promise
     await expect(promise).rejects.toThrow()
   })
+
+  test('Should return an account on success', async () => {
+    // for success path we don't mock anything - the default path should work
+    const { sut } = makeSut()
+    const accountData = {
+      name: 'valid_name',
+      email: 'valid_email',
+      password: 'valid_password'
+    }
+    const account = await sut.add(accountData)
+
+    expect(account).toEqual({
+      id: 'valid_id',
+      name: 'valid_name',
+      email: 'valid_email',
+      password: 'hashed_password'
+    })
+  })
 })
