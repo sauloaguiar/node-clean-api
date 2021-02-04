@@ -1,6 +1,12 @@
 import bcrypt from 'bcrypt'
 import { BcryptAdapter } from './bcrypt-adapter'
 
+jest.mock('bcrypt', () => ({
+  async hash (): Promise<string> {
+    return await new Promise(resolve => resolve('hash'))
+  }
+}))
+
 describe('BCrypt Adapter', () => {
   test('should call bcrypt with correct values', async () => {
     const salt = 12
@@ -15,5 +21,14 @@ describe('BCrypt Adapter', () => {
 
     // but we check that both values were given during the function call
     expect(hashSpy).toBeCalledWith('any_value', salt)
+  })
+
+  test('should return a hash on success', async () => {
+    const salt = 12
+    const sut = new BcryptAdapter(salt)
+    const hash = await sut.encrypt('any_value')
+
+    // but we check that both values were given during the function call
+    expect(hash).toBe('hash')
   })
 })
